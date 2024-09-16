@@ -1,0 +1,35 @@
+# Start with a base image that includes JDK 17 (or whatever version you're using)
+FROM eclipse-temurin:17-jdk-jammy as build
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the Gradle wrapper and configuration files into the container
+COPY gradlew .
+COPY gradle gradle
+COPY build.gradle .
+COPY settings.gradle .
+
+# Copy the source code into the container
+COPY src src
+
+# Grant execute permission to the gradle wrapper
+RUN chmod +x ./gradlew
+
+# Build the Spring Boot application
+RUN ./gradlew clean build -x test
+
+# Prepare the final image from a lighter JRE base
+FROM eclipse-temurin:17-jre-jammy
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the JAR file from the build image
+COPY --from=build /app/build/libs/*.jar app.jar
+
+# Expose the application's port (this should match your Spring Boot configuration, usually 8080)
+EXPOSE 8080
+
+# Specify the command to run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]
